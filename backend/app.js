@@ -5,12 +5,13 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const multer = require("multer");
 
-const feedRoutes = require("./routes/feed");
-const authRoutes = require("./routes/auth");
+const grapqlHttp = require("graphql-http/lib/use/express");
+const graphiql = require("express-graphiql-explorer");
+
+const graphqlSchema = require("./graphql/schema");
+const graphqlResolver = require("./graphql/resolvers");
 
 const app = express();
-const http = require("http");
-const server = http.createServer(app);
 
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -50,8 +51,21 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/feed", feedRoutes);
-app.use("/auth", authRoutes);
+app.use(
+  "/graphiql",
+  graphiql({
+    graphQlEndpoint: "/graphql",
+    defaultQuery: `query MyQuery {}`,
+  })
+);
+
+app.all("/graphql", (req, res) =>
+  grapqlHttp.createHandler({
+    schema: graphqlSchema,
+    rootValue: graphqlResolver,
+    context: { req, res },
+  })(req, res)
+);
 
 app.use((error, req, res, next) => {
   console.log(error);
@@ -66,10 +80,6 @@ mongoose
     "mongodb+srv://abrambagus_db_user:Le8JaOB7qFK7b175@cluster0.d1jikx7.mongodb.net/messages?retryWrites=true&w=majority&appName=Cluster0&tlsAllowInvalidCertificates=true&tlsAllowInvalidHostnames=true"
   )
   .then(() => {
-    const io = require("./socket").init(server);
-    io.on("connection", (socket) => {
-      console.log("Client connected.");
-    });
-    server.listen(8080);
+    app.listen(8080);
   })
   .catch((err) => console.log(err));
