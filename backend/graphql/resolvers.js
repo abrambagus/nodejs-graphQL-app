@@ -5,21 +5,23 @@ const User = require("../models/user");
 
 module.exports = {
   createUser: async ({ userInput }, _context, _info) => {
-    const error = [];
+    const errors = [];
     if (!validator.isEmail(userInput.email)) {
-      error.push({ message: "E-Mail is invalid." });
+      errors.push({ message: "E-Mail is invalid." });
     }
 
     if (
       validator.isEmpty(userInput.password) ||
       !validator.isLength(userInput.password, { min: 5 })
     ) {
-      error.push({ message: "Password too short!" });
+      errors.push({ message: "Password too short!" });
     }
 
-    if (error.length > 0) {
-      const err = new Error("Invalid input.");
-      throw err;
+    if (errors.length > 0) {
+      const error = new Error("Invalid input.");
+      error.data = errors;
+      error.code = 422;
+      throw error;
     }
 
     const existingUser = await User.findOne({ email: userInput.email });
