@@ -56,8 +56,8 @@ class Feed extends Component {
     }
     const graphqlQuery = {
       query: `
-        {
-          posts {
+      {
+          posts(page: ${page}) {
               posts {
                   _id
                   title
@@ -69,8 +69,8 @@ class Feed extends Component {
               }
               totalPosts
           }
-        }
-        `,
+      }
+      `,
     };
 
     fetch("http://localhost:8080/graphql", {
