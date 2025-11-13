@@ -1,4 +1,5 @@
 const path = require("path");
+const fs = require("fs");
 
 const express = require("express");
 const bodyParser = require("body-parser");
@@ -57,6 +58,23 @@ app.use((req, res, next) => {
 
 app.use(auth);
 
+app.put("/post-image", (req, res, next) => {
+  if (!req.isAuth) {
+    throw new Error("Not authenticated!");
+  }
+  if (!req.file) {
+    return res.status(200).json({ message: "No file provided!" });
+  }
+  if (req.body.oldPath) {
+    clearImage(req.body.oldPath);
+  }
+  return res.status(201).json({
+    message: "File stored.",
+    /** REPLACE ALL '\' with '/' */
+    filePath: req.file.path.replace(/\\/g, "/"),
+  });
+});
+
 app.use(
   "/graphiql",
   graphiql({
@@ -70,14 +88,18 @@ app.all("/graphql", (req, res) =>
     schema: graphqlSchema,
     rootValue: graphqlResolver,
     context: { req, res },
-    formatError: (err) => {
+    formatError(err) {
       if (!err.originalError) {
         return err;
       }
       const data = err.originalError.data;
       const message = err.message || "An error occurred.";
       const code = err.originalError.code || 500;
-      return { message: message, status: code, data: data };
+      return {
+        message: message,
+        status: code,
+        data: data,
+      };
     },
   })(req, res)
 );
@@ -98,3 +120,8 @@ mongoose
     app.listen(8080);
   })
   .catch((err) => console.log(err));
+
+function clearImage(filePath) {
+  filePath = path.join(__dirname, "..", filePath);
+  fs.unlink(filePath, (err) => console.log(err));
+}
